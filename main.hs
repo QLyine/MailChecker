@@ -89,9 +89,9 @@ conds bs = B.isPrefixOf (BC.pack "From:") bs
 getValue :: [BC.ByteString] -> String -> String
 getValue fields str = 
     BC.unpack 
-  $ snd  
-  $ B.break (==BI.c2w (' ')) 
-  $ head 
+  . snd  
+  . B.break (==BI.c2w (' ')) 
+  . head 
   $ filter (B.isPrefixOf (BC.pack str)) fields
 
 fileToParse :: FilePath -> IO MailFile

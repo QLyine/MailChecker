@@ -39,7 +39,7 @@ data Mail = Mail {
   } deriving Show
 
 main :: IO ()
-main = getArgs >>= compilerOpts >>= compute >>= print
+main = getArgs >>= compilerOpts >>= compute >>= printMail
 
 options :: [OptDescr (Options -> Options)]
 options =
@@ -70,9 +70,12 @@ computeOneMail :: (FilePath -> IO (MailFile)) -> [Char] -> IO Mail
 computeOneMail f fpath = do
       let mbox  = snd $ splitFileName fpath 
           dir   = fpath </> "new"  
-      filesToProcess <- (getDirectoryContents dir) >>= mapM ( canonicalizePath . (dir </>))
-      let count = length $ drop 2 $ filesToProcess
-      mailFiles <- mapM ( f ) (drop 2 filesToProcess) 
+      filesToProcess <- (getDirectoryContents dir) 
+            >>= mapM ( canonicalizePath . (dir </>))
+            . filter (`notElem` [".", ".."] ) 
+      print $ filesToProcess
+      let count = length filesToProcess 
+      mailFiles <- mapM ( f ) filesToProcess
       return $ Mail mbox mailFiles count
 
 version = putStrLn "MailReader 0.1"
@@ -103,3 +106,21 @@ fileToParse f = do
       date    = getValue fields "Date"
       sub     = getValue fields "Subject"
   return $ MailFile from to sub date
+
+printMail :: [Mail] -> IO () 
+printMail [] = putStrLn "End of Check"
+printMail (x:xs) = do
+  putStrLn $ ">>>>>> " ++ (mbox x) ++ " >>>>>>"
+  --putStrLn $ "Unread >> " ++ (count x) 
+  putStrLn $ printMailFile (mailFile x) 
+  putStrLn $ "<<<<<< " ++ (mbox x) ++ " <<<<<<\n"
+  printMail xs 
+  
+printMailFile :: [MailFile] -> String
+printMailFile [] = ""
+printMailFile (x:xs) = 
+      "\tFrom >> " ++ (from x) ++ "\n"
+  ++  "\tTo >> " ++ (to x) ++ "\n"
+  ++  "\tSubject >> " ++ (subject x) ++ "\n"
+  ++  "\tDate >> " ++ (date x) ++ "\n\n"
+  ++  printMailFile xs 

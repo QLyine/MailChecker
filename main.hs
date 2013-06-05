@@ -5,8 +5,8 @@ import Control.Monad
 import Control.Applicative
 
 import qualified Data.ByteString.Internal as BI
-import qualified Data.ByteString as B
-import qualified Data.ByteString.Char8 as BC
+import qualified Data.ByteString.Lazy as B
+import qualified Data.ByteString.Lazy.Char8 as BC
 import Data.Maybe ( fromMaybe )
 
 import System.Environment
@@ -95,12 +95,20 @@ getValue fields str =
   . snd  
   . B.break (==BI.c2w (' ')) 
   . head 
-  $ filter (B.isPrefixOf (BC.pack str)) fields
+  $ filter' [] 1 (B.isPrefixOf (BC.pack str)) fields
+
+--filter' acc stop c l 
+filter' :: [BC.ByteString] -> Int -> (BC.ByteString -> Bool) -> [BC.ByteString] -> [BC.ByteString]
+filter' acc 0 _ _  = acc
+filter' acc _ _ [] = acc
+filter' acc s c (x:xs) 
+  | c x = filter' (x:acc) (s - 1) (c) (xs)
+  | not (c x) = filter' (acc) (s) (c) (xs)
 
 fileToParse :: FilePath -> IO MailFile
 fileToParse f = do
   fileLines <- B.split (BI.c2w ('\n')) <$> B.readFile f
-  let fields  = filter conds fileLines
+  let fields  = filter' [] 4 conds fileLines
       from    = getValue fields "From"
       to      = getValue fields "To"
       date    = getValue fields "Date"
